@@ -1,0 +1,235 @@
+﻿@model IEnumerable<TaipeiOMG.Models.Stop>
+
+@{
+    Layout = null;
+}
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+<head>
+    <title>Add default pushpin</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <script type="text/javascript" src="http://ecn.dev.virtualearth.net/mapcontrol/mapcontrol.ashx?v=7.0&mkt=zh-TW"></script>
+    <script type="text/javascript">
+        // 地圖功能
+        var map = null;
+        function getMap() {
+            // Initialize the map
+            map = new Microsoft.Maps.Map(document.getElementById("mapDiv"), {
+                credentials: "AtazCyRX5YGcxbFHYjPIA9TG3NjyOD2z1QafHWGMI95PW0hXQID8f1mG1y_Qqgn7",
+                mapTypeId: Microsoft.Maps.MapTypeId.road
+            });
+            // Gets current location of user
+            var userGeoLocationProvider = new Microsoft.Maps.GeoLocationProvider(map);
+            userGeoLocationProvider.getCurrentPosition({ successCallback: ZoomInToUserLocation });
+            function ZoomInToUserLocation(args) {
+                map.setView({ zoom: 16, center: args.center });
+                addPushpin(args.center.latitude, args.center.longitude, 'hi!');
+                // Marks current location with a circle and sets its border width,
+                    // border color and body color
+                    /*userGeoLocationProvider.addAccuracyCircle(args.center, 50, 50, {
+                        polygonOptions: {
+                            strokeThickness: 2,
+                            fillColor: new Microsoft.Maps.Color(200, 255, 128, 0),
+                            strokeColor: new Microsoft.Maps.Color(255, 0, 128, 0)
+                        }
+                    });*/
+                @foreach (var item in Model) {
+                    @:addPushpin(@item.Latitude, @item.Longitude, '@item.NameZh');
+                    break;
+                }
+            }
+        }
+
+        function addPushpin(lat, lon, magnitude) {
+            var pushpinOptions = { text: magnitude, visible: true};
+            var pushpin = new Microsoft.Maps.Pushpin(new Microsoft.Maps.Location(lat, lon), pushpinOptions);
+            map.entities.push(pushpin);
+        }
+        // ================================================================================================
+
+        // 搜尋功能
+        function findLocation() {
+            map.getCredentials(callLocationRequest);
+        }
+        function callLocationRequest(credentials) {
+            var searchRequest = "http://dev.virtualearth.net/REST/v1/Locations?query=" + 
+                encodeURI(document.getElementById('txtQuery').value) + 
+                "&output=json&jsonp=findLocationCallback&key=" + credentials;
+            issueRequest(searchRequest);            
+        }
+        function issueRequest(req){
+            var script = document.createElement("script");
+            script.setAttribute("type", "text/javascript");
+            script.setAttribute("src", req);
+            document.getElementById('mapDiv').appendChild(script)
+        }
+        function findLocationCallback(result) {
+            if (result &&
+                    result.resourceSets &&
+                    result.resourceSets.length > 0 &&
+                    result.resourceSets[0].resources &&
+                    result.resourceSets[0].resources.length > 0) {
+                // Set the map view using the returned bounding box
+                var bbox = result.resourceSets[0].resources[0].bbox;
+                var viewBoundaries = Microsoft.Maps.LocationRect.fromLocations(new Microsoft.Maps.Location(bbox[0], bbox[1]), new Microsoft.Maps.Location(bbox[2], bbox[3]));
+                map.setView({ bounds: viewBoundaries });
+
+                // Add a pushpin at the found location
+                end_latitude = result.resourceSets[0].resources[0].point.coordinates[0];
+                end_longitude = result.resourceSets[0].resources[0].point.coordinates[1];
+                var location = new Microsoft.Maps.Location(end_latitude, end_longitude);
+                var pushpin = new Microsoft.Maps.Pushpin(location);
+                map.entities.push(pushpin);
+            }else{
+                if (typeof (response) == 'undefined' || response == null) {
+                    alert("Bing Map API 無回應或是無效的地圖金鑰");
+                }else{
+                    if (typeof (response) != 'undefined' && response && result && result.errorDetails) {
+                        alert("發生錯誤！錯誤訊息：" + response.errorDetails[0]);
+                    }else{
+                        alert("找不到符合的地名或街道名");
+                    }
+                }
+            }
+        }
+        // ================================================================================================
+
+        // 規劃路徑功能
+        var end_latitude, end_longitude, end;
+        var start_latitude, start_longitude;        
+        var directionsManager;
+        var directionsErrorEventObj;
+        var directionsUpdatedEventObj;
+        function route() {
+            var userGeoLocationProvider = new Microsoft.Maps.GeoLocationProvider(map);
+            userGeoLocationProvider.getCurrentPosition({ successCallback: currentLocationCallback});
+            function currentLocationCallback(args) {
+                start_latitude = args.center.latitude;
+                start_longitude = args.center.longitude;
+                end = document.getElementById('txtQuery').value;
+                map.getCredentials(callRouteService);
+                //if (!directionsManager) {
+                //    Microsoft.Maps.loadModule('Microsoft.Maps.Directions', { callback: createTaipeiOMGRoute});
+                //}
+                //else {
+                //    createTaipeiOMGRoute();
+                //}   
+            }            
+        }
+        function createTaipeiOMGRoute(){
+            if (!directionsManager) { 
+                createDirectionsManager(); 
+            }
+            directionsManager.resetDirections();
+            // Set Route Mode to walk
+            directionsManager.setRequestOptions({ routeMode: Microsoft.Maps.Directions.RouteMode.transit });
+            var waypoint1 = new Microsoft.Maps.Directions.Waypoint({ location: new Microsoft.Maps.Location(start_latitude, start_longitude) });
+            directionsManager.addWaypoint(waypoint1);
+            var waypoint2 = new Microsoft.Maps.Directions.Waypoint({ address: end });
+            directionsManager.addWaypoint(waypoint2);
+            // Set the element in which the itinerary will be rendered
+            directionsManager.setRenderOptions({ itineraryContainer: document.getElementById('directionsItinerary') });
+            directionsManager.calculateDirections();
+        }
+        function createDirectionsManager() {
+            if (!directionsManager) {
+                directionsManager = new Microsoft.Maps.Directions.DirectionsManager(map);
+            }
+            directionsManager.resetDirections();
+            //Microsoft.Maps.Events.addHandler(directionsManager, 'beforeSummaryRender', beforeSummaryRender);
+            Microsoft.Maps.Events.addHandler(directionsManager, 'directionsUpdated', directionsUpdated);
+        }
+        //function beforeSummaryRender(args){
+        //    console.log(args);
+        //    if(args.route && args.route.length > 0 && args.route[0].routeLegs.length > 0 && 
+        //        args.route[0].routeLegs[0].itineraryItems.length > 0){
+        //        args.route[0].routeLegs[0].itineraryItems.push(args.route[0].routeLegs[0].itineraryItems[1]);
+        //    }            
+        //}
+        function directionsUpdated(args){
+            if(args.route && args.route.length > 0 && args.route[0].routeLegs.length > 0 && 
+                args.route[0].routeLegs[0].itineraryItems.length > 0){
+                //args.route[0].routeLegs[0].itineraryItems.push(args.route[0].routeLegs[0].itineraryItems[1]);
+                var waypoint = new Microsoft.Maps.Directions.Waypoint({ location: new Microsoft.Maps.Location("25.02634048461914", "121.56140899658203") }); 
+                directionsManager.addWaypoint(waypoint);
+            }            
+        }
+        function callRouteService(credentials) {
+            var currentdate = new Date(); 
+            var time = currentdate.getHours() + ":"  
+                + currentdate.getMinutes() + ":" 
+                + currentdate.getSeconds();
+            var routeRequest = 'http://dev.virtualearth.net/REST/v1/Routes/Transit?wp.0=' + start_latitude +"," + start_longitude +
+                '&wp.1=' + end_latitude + "," + end_longitude + '&timeType=Departure&dateTime=' + time + '&routePathOutput=Points&output=json&jsonp=routeCallback&key=' + credentials;
+            issueRequest(routeRequest);
+        }
+        function routeCallback(result){
+            var output = document.getElementById("directionsItinerary");
+            if (output) {
+                while (output.hasChildNodes()) {
+                    output.removeChild(output.lastChild);
+                }
+                var resultsHeader = document.createElement("h5");
+                var resultsList = document.createElement("ol");
+                output.appendChild(resultsHeader);
+                output.appendChild(resultsList);
+
+                if (result && 
+                    result.resourceSets && 
+                    result.resourceSets.length > 0 && 
+                    result.resourceSets[0].resources && 
+                    result.resourceSets[0].resources.length > 0) {
+                    resultsHeader.innerHTML = //"從 " +
+                    //result.resourceSets[0].resources[0].routeLegs[0].startLocation.name + " 到 "
+                    //+ result.resourceSets[0].resources[0].routeLegs[0].endLocation.name + " 的
+                    "路徑規劃結果";
+                    var resultsListItem = null;
+                    for (var i = 0; 
+                             i < result.resourceSets[0].resources[0].routeLegs[0].itineraryItems.length; 
+                             ++i) {
+                        resultsListItem = document.createElement("li");
+                        resultsList.appendChild(resultsListItem);
+                        resultStr = result.resourceSets[0].resources[0].routeLegs[0].itineraryItems[i].instruction.text;
+                        resultsListItem.innerHTML = resultStr;
+                    }
+                    var bbox = result.resourceSets[0].resources[0].bbox;
+                    var viewBoundaries = Microsoft.Maps.LocationRect.fromLocations(
+                        new Microsoft.Maps.Location(bbox[0], bbox[1]), 
+                        new Microsoft.Maps.Location(bbox[2], bbox[3]));
+                    map.setView({ bounds: viewBoundaries });
+                    var routeline = result.resourceSets[0].resources[0].routePath.line; 
+                    var routepoints = new Array();
+                    for (var i = 0; i < routeline.coordinates.length; i++) {
+                        routepoints[i] = new Microsoft.Maps.Location(routeline.coordinates[i][0], 
+                            routeline.coordinates[i][1]);
+                    }
+                    var routeshape = new Microsoft.Maps.Polyline(routepoints, { strokeColor: new Microsoft.Maps.Color(200, 0, 0, 200) });
+                    var startPushpinOptions = { anchor: new Microsoft.Maps.Point(10, 32) };
+                    var startPin = new Microsoft.Maps.Pushpin(new Microsoft.Maps.Location(routeline.coordinates[0][0], 
+                        routeline.coordinates[0][1]), startPushpinOptions);
+                    var endPushpinOptions = { anchor: new Microsoft.Maps.Point(10, 32) };
+                    var endPin = new Microsoft.Maps.Pushpin(new Microsoft.Maps.Location(routeline.coordinates[routeline.coordinates.length - 1][0], 
+                        routeline.coordinates[routeline.coordinates.length - 1][1]),
+                    endPushpinOptions);
+                    map.entities.push(startPin);
+                    map.entities.push(endPin);
+                    map.entities.push(routeshape);
+                }
+                else {
+                    if (typeof (result.errorDetails) != 'undefined') {
+                        resultsHeader.innerHTML = result.errorDetails[0];
+                    }
+                    alert("抱歉，無法規畫路徑");
+                }
+            }
+        }
+    </script>
+</head>
+<body onload="getMap();">
+    <div id='mapDiv' style="position:relative; width:100%; height:400px;"></div>
+    <input id="txtQuery" type="text" value="台北火車站" />
+    <input type="button" value="目標地點" onclick="findLocation()" />
+    <input type="button" value="規劃路徑" onclick="route();" />
+    <div id='directionsItinerary'> </div>
+</body>
+</html>
