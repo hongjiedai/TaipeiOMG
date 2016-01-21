@@ -78,8 +78,11 @@
                 end_latitude = result.resourceSets[0].resources[0].point.coordinates[0];
                 end_longitude = result.resourceSets[0].resources[0].point.coordinates[1];
                 var location = new Microsoft.Maps.Location(end_latitude, end_longitude);
-                var pushpin = new Microsoft.Maps.Pushpin(location);
+                var pushpin = new Microsoft.Maps.Pushpin(location, {draggable: true });
                 map.entities.push(pushpin);
+                //Microsoft.Maps.Events.addHandler(pushpin, 'dragstart', StartDragHandler);
+                //Microsoft.Maps.Events.addHandler(pushpin, 'drag', DragHandler);
+                Microsoft.Maps.Events.addHandler(pushpin, 'dragend', dragEndHandler);
             }else{
                 if (typeof (response) == 'undefined' || response == null) {
                     alert("Bing Map API 無回應或是無效的地圖金鑰");
@@ -92,6 +95,11 @@
                 }
             }
         }
+        function dragEndHandler(e) {
+            end_latitude = e.entity._location.latitude;
+            end_longitude = e.entity._location.longitude;
+        }
+
         // ================================================================================================
 
         // 規劃路徑功能
@@ -106,7 +114,9 @@
             function currentLocationCallback(args) {
                 start_latitude = args.center.latitude;
                 start_longitude = args.center.longitude;
-                end = document.getElementById('txtQuery').value;
+                if(!end_latitude && !end_longitude){
+                    end = document.getElementById('txtQuery').value;
+                }
                 map.getCredentials(callRouteService);
                 //if (!directionsManager) {
                 //    Microsoft.Maps.loadModule('Microsoft.Maps.Directions', { callback: createTaipeiOMGRoute});
@@ -225,11 +235,13 @@
         }
     </script>
 </head>
-<body onload="getMap();">
-    <div id='mapDiv' style="position:relative; width:100%; height:400px;"></div>
-    <input id="txtQuery" type="text" value="台北火車站" />
-    <input type="button" value="目標地點" onclick="findLocation()" />
-    <input type="button" value="規劃路徑" onclick="route();" />
+<body onload="getMap();">    
+    <div>
+        <input id="txtQuery" type="text" value="台北火車站" />
+        <input type="button" value="目標地點" onclick="findLocation()" />
+        <input type="button" value="規劃路徑" onclick="route();" />
+    </div>
+    <div id='mapDiv' style="position:relative; float:left; width:75%; height:500px;"></div>
     <div id='directionsItinerary'> </div>
 </body>
 </html>
