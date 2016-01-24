@@ -3,23 +3,31 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Device.Location;
+using System.IO;
 using System.Linq;
+using System.Net;
 using System.Web;
+using System.Web.Http;
 using System.Web.Mvc;
 using TaipeiOMG.Models;
 
 namespace TaipeiOMG.Controllers
 {
-    public class StopController : Controller
+    public class StopController : ApiController
     {
-        private static IList<Stop> stops;
-        public static IList<Stop> ReadStopData(string fname)
+        public readonly static string URL = "http://data.taipei/bus/Stop";
+        private static Dictionary<string, Stop> stops;
+        static StopController()
         {
-            string path = System.Web.HttpContext.Current.Server.MapPath(string.Format("~/App_Data/{0}", fname));
-            string jsonText = System.IO.File.ReadAllText(path);
+            MemoryStream uncompressed = Utilities.GetUnzipDataStream(URL);
+            string jsonText = null;
+            using (StreamReader sr = new StreamReader(uncompressed))
+            {
+                jsonText = sr.ReadToEnd();
+            }
             JObject json = JObject.Parse(jsonText);
             IList<JToken> results = json["BusInfo"].Children().ToList();
-            IList<Stop> stops = new List<Stop>();
+            stops = new Dictionary<string, Stop>();
             foreach (JToken result in results)
             {
                 Stop stop = JsonConvert.DeserializeObject<Stop>(result.ToString());
@@ -27,19 +35,27 @@ namespace TaipeiOMG.Controllers
                 //stop.Coordinate = gc;
                 //gc = new GeoCoordinate(Double.Parse(stop.ShowLon), Double.Parse(stop.ShowLat));
                 //stop.ShowCoordinate = gc;
-                stops.Add(stop);
+                stops.Add(stop.Id, stop);
             }
+        }
 
-            return stops;
+        public static Stop GetStopName(string stopId)
+        {
+            if (stops.ContainsKey(stopId))
+            {
+                return stops[stopId];
+            }
+            return null;
         }
         // GET: Stop
-        public ActionResult Index()
+        public Stop Get(string id)
         {
-            if (stops == null)
+            Stop stop = GetStopName(id);
+            if (stop != null)
             {
-                stops = ReadStopData("GetSTOP");
+                return stop;
             }
-            return View(stops);
+            return new Stop();
         }
     }
 }

@@ -11,13 +11,22 @@ namespace TaipeiOMG.Controllers
 {
     public class RouteController : ApiController
     {
-        private static long lastAccess;
+        private static Dictionary<string, string> busName2RouteId;
         private static Dictionary<string, List<BusInfo>> busInfos;
+        public static string GetBusRouteId(string name)
+        {
+            if (busName2RouteId.ContainsKey(name))
+            {
+                return busName2RouteId[name];
+            }
+            return null;
+        }
 
         // GET api/Route
         static RouteController()
         {
             busInfos = new Dictionary<string, List<BusInfo>>();
+            busName2RouteId = new Dictionary<string, string>();
             string path = System.Web.HttpContext.Current.Server.MapPath(string.Format("~/App_Data/GetRoute"));
             string jsonText = System.IO.File.ReadAllText(path);
             JObject json = JObject.Parse(jsonText);
@@ -31,6 +40,7 @@ namespace TaipeiOMG.Controllers
                     busInfos.Add(bus.NameZh, new List<BusInfo>());
                 }
                 busInfos[bus.NameZh].Add(bus);
+                busName2RouteId[bus.NameZh] = bus.Id;
             }
         }
         public Controllers.BusInfo Get(string id)
@@ -40,7 +50,7 @@ namespace TaipeiOMG.Controllers
             {
                 busInfo.RoadMapUrl = busInfos[id].First<BusInfo>().RoadMapUrl;
                 if (busInfos[id].Count == 1)
-                {                    
+                {
                     busInfo.BackFirstBusTime = busInfos[id].First<BusInfo>().BackFirstBusTime;
                     busInfo.BackLastBusTime = busInfos[id].First<BusInfo>().BackLastBusTime;
                     busInfo.GoFirstBusTime = busInfos[id].First<BusInfo>().GoFirstBusTime;
