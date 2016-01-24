@@ -19,13 +19,13 @@ namespace TaipeiOMG.Controllers
         private static Dictionary<string, Stop> stops;
         static StopController()
         {
-            MemoryStream uncompressed = Utilities.GetUnzipDataStream(URL);
-            uncompressed.Close();
+            MemoryStream uncompressed = Utilities.GetUnzipDataStream(URL);            
             string jsonText = null;
             using (StreamReader sr = new StreamReader(uncompressed))
             {
                 jsonText = sr.ReadToEnd();
             }
+            uncompressed.Close();
             JObject json = JObject.Parse(jsonText);
             IList<JToken> results = json["BusInfo"].Children().ToList();
             stops = new Dictionary<string, Stop>();
