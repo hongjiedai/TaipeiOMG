@@ -20,6 +20,7 @@ namespace TaipeiOMG.Controllers
         static StopController()
         {
             MemoryStream uncompressed = Utilities.GetUnzipDataStream(URL);
+            uncompressed.Close();
             string jsonText = null;
             using (StreamReader sr = new StreamReader(uncompressed))
             {
