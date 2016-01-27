@@ -6,9 +6,11 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Web.Http;
+using System.Web.Http.Cors;
 
 namespace TaipeiOMG.Controllers
 {
+    [EnableCors(origins: "http://taipeiomg.azurewebsites.net/", headers: "*", methods: "*")]
     public class RouteController : ApiController
     {
         private static Dictionary<string, string> busName2RouteId;

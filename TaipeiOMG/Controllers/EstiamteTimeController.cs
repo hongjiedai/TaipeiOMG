@@ -11,10 +11,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Hosting;
 using System.Web.Http;
+using System.Web.Http.Cors;
 using TaipeiOMG.Models;
 
 namespace TaipeiOMG.Controllers
 {
+    [EnableCors(origins: "http://taipeiomg.azurewebsites.net/", headers: "*", methods: "*")]
     public class EstimateTimeController : ApiController
     {
         static EstimateTimeController()
