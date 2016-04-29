@@ -10,7 +10,7 @@ using System.Web.Http.Cors;
 
 namespace TaipeiOMG.Controllers
 {
-    [EnableCors(origins: "http://taipeiomg.azurewebsites.net/", headers: "*", methods: "*")]
+    [EnableCors(origins: "http://open-data-fz0w8m36.cloudapp.net", headers: "*", methods: "*")]
     public class RouteController : ApiController
     {
         private static Dictionary<string, string> busName2RouteId;

@@ -16,7 +16,7 @@ using TaipeiOMG.Models;
 
 namespace TaipeiOMG.Controllers
 {
-    [EnableCors(origins: "http://taipeiomg.azurewebsites.net/", headers: "*", methods: "*")]
+    [EnableCors(origins: "http://open-data-fz0w8m36.cloudapp.net", headers: "*", methods: "*")]
     public class EstimateTimeController : ApiController
     {
         static EstimateTimeController()
